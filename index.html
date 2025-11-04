@@ -538,6 +538,8 @@
         let receivedFrames = new Map();
         let totalExpectedFrames = 0;
         let isScanning = false;
+        let scanAttempts = 0;
+        let lastScanTime = Date.now();
 
         async function startScanning() {
             if (isScanning) return;
@@ -590,12 +592,16 @@
                     onScanSuccess,
                     onScanFailure
                 );
-                
+
                 isScanning = true;
+                scanAttempts = 0;
+                lastScanTime = Date.now();
+
                 output.innerHTML = `
                     <div class="info-box success">
                         <p>✅ <strong>Camera ready!</strong></p>
                         <p>Point your camera at the QR codes to receive data.</p>
+                        <p id="scanStatus" style="margin-top: 10px; color: #666; font-size: 12px;">Scanning... 0 attempts</p>
                     </div>
                 `;
             } catch (err) {
@@ -639,7 +645,7 @@
         function onScanSuccess(decodedText, decodedResult) {
             try {
                 const frame = JSON.parse(decodedText);
-                
+
                 // Validate frame structure
                 if (!frame.v || frame.i === undefined || !frame.t || !frame.d) {
                     return; // Not our format
@@ -649,6 +655,12 @@
                 if (!receivedFrames.has(frame.i)) {
                     receivedFrames.set(frame.i, frame.d);
                     totalExpectedFrames = frame.t;
+
+                    // Update status to show successful scan
+                    const statusEl = document.getElementById('scanStatus');
+                    if (statusEl) {
+                        statusEl.innerHTML = `✅ <strong>Receiving data...</strong> Frame ${frame.i + 1}/${frame.t} received (${scanAttempts} scans)`;
+                    }
 
                     // Update UI
                     updateReceiveProgress();
@@ -664,7 +676,25 @@
         }
 
         function onScanFailure(error) {
-            // Scanning errors are normal, just ignore
+            // Update scan attempts counter
+            scanAttempts++;
+            const now = Date.now();
+            const timeSinceLastScan = now - lastScanTime;
+            lastScanTime = now;
+
+            // Update status display every 10 attempts to avoid UI spam
+            if (scanAttempts % 10 === 0) {
+                const statusEl = document.getElementById('scanStatus');
+                if (statusEl) {
+                    const fps = timeSinceLastScan > 0 ? (1000 / timeSinceLastScan).toFixed(1) : '0';
+                    statusEl.textContent = `Scanning... ${scanAttempts} attempts (~${fps} fps) - ${receivedFrames.size} frames received`;
+
+                    // Show helpful message if no frames after many attempts
+                    if (scanAttempts > 100 && receivedFrames.size === 0) {
+                        statusEl.innerHTML += `<br><span style="color: #ff9800;">⚠️ No QR codes detected yet. Try adjusting distance/angle/lighting.</span>`;
+                    }
+                }
+            }
         }
 
         function updateReceiveProgress() {
