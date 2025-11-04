@@ -198,6 +198,3 @@ Having issues? Check these common problems:
 - Larger files take longer
 - Consider compressing files first
 
----
-
-Made with ❤️ for offline data transfer
