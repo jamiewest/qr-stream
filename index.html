@@ -314,6 +314,7 @@
                 <div class="controls">
                     <button onclick="startTransmission()">Generate QR Stream</button>
                     <button onclick="stopTransmission()" id="stopBtn" disabled>Stop</button>
+                    <button onclick="testQR()" style="background: #ff9800;">🧪 Test Simple QR</button>
                 </div>
                 
                 <div id="qrDisplay" class="qr-display" style="display: none;">
@@ -334,7 +335,7 @@
                             <div class="stat-label">Data Size</div>
                         </div>
                         <div class="stat-card">
-                            <div class="stat-value" id="frameRate">2 fps</div>
+                            <div class="stat-value" id="frameRate">1 fps</div>
                             <div class="stat-label">Frame Rate</div>
                         </div>
                     </div>
@@ -443,7 +444,7 @@
         let currentChunks = [];
         let currentChunkIndex = 0;
 
-        function splitDataIntoChunks(data, chunkSize = 1200) {
+        function splitDataIntoChunks(data, chunkSize = 800) {
             const chunks = [];
             const encoder = new TextEncoder();
             const bytes = encoder.encode(data);
@@ -483,7 +484,7 @@
 
             // Start transmission loop
             displayNextQR();
-            transmissionInterval = setInterval(displayNextQR, 500); // ~2 fps (slower for better scanning)
+            transmissionInterval = setInterval(displayNextQR, 1000); // 1 fps (very slow for maximum scanning reliability)
         }
 
         function displayNextQR() {
@@ -506,11 +507,11 @@
             // Generate new QR code
             new QRCode(container, {
                 text: frameJson,
-                width: 400,
-                height: 400,
+                width: 450,
+                height: 450,
                 colorDark: '#000000',
                 colorLight: '#ffffff',
-                correctLevel: QRCode.CorrectLevel.M // Medium error correction for better scanning
+                correctLevel: QRCode.CorrectLevel.H // High error correction for maximum reliability
             });
 
             // Update progress
@@ -531,6 +532,37 @@
             }
             document.getElementById('stopBtn').disabled = true;
             currentChunkIndex = 0;
+        }
+
+        function testQR() {
+            stopTransmission();
+
+            // Create simplest possible QR code for testing
+            const testFrame = {
+                v: 1,
+                i: 0,
+                t: 1,
+                d: btoa("TEST")
+            };
+
+            const container = document.getElementById('qrCanvas');
+            container.innerHTML = '';
+
+            document.getElementById('qrDisplay').style.display = 'block';
+            document.getElementById('totalChunks').textContent = '1';
+            document.getElementById('dataSize').textContent = '0.01 KB';
+            document.getElementById('sendProgress').style.width = '100%';
+            document.getElementById('sendProgress').textContent = '100%';
+            document.getElementById('sendProgressText').textContent = 'Test QR Code - Frame 1 / 1';
+
+            new QRCode(container, {
+                text: JSON.stringify(testFrame),
+                width: 450,
+                height: 450,
+                colorDark: '#000000',
+                colorLight: '#ffffff',
+                correctLevel: QRCode.CorrectLevel.H
+            });
         }
 
         // ============ RECEIVER LOGIC ============
