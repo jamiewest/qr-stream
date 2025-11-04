@@ -164,7 +164,7 @@
         
         #qrCanvas {
             display: inline-block;
-            padding: 20px;
+            padding: 40px;
             background: white;
             border-radius: 8px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
@@ -277,6 +277,44 @@
             color: #666;
             margin-top: 5px;
         }
+
+        .fullscreen-qr {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: white;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .fullscreen-qr #qrCanvas {
+            padding: 60px;
+        }
+
+        .fullscreen-controls {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 10000;
+        }
+
+        .fullscreen-info {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 18px;
+            z-index: 10000;
+        }
     </style>
 </head>
 <body>
@@ -315,6 +353,7 @@
                     <button onclick="startTransmission()">Generate QR Stream</button>
                     <button onclick="stopTransmission()" id="stopBtn" disabled>Stop</button>
                     <button onclick="testQR()" style="background: #ff9800;">🧪 Test Simple QR</button>
+                    <button onclick="toggleFullscreen()" id="fullscreenBtn" style="background: #4caf50;" disabled>⛶ Fullscreen</button>
                 </div>
                 
                 <div id="qrDisplay" class="qr-display" style="display: none;">
@@ -443,8 +482,9 @@
         let transmissionInterval = null;
         let currentChunks = [];
         let currentChunkIndex = 0;
+        let isFullscreen = false;
 
-        function splitDataIntoChunks(data, chunkSize = 800) {
+        function splitDataIntoChunks(data, chunkSize = 500) {
             const chunks = [];
             const encoder = new TextEncoder();
             const bytes = encoder.encode(data);
@@ -477,6 +517,7 @@
             // Show display
             document.getElementById('qrDisplay').style.display = 'block';
             document.getElementById('stopBtn').disabled = false;
+            document.getElementById('fullscreenBtn').disabled = false;
 
             // Update stats
             document.getElementById('totalChunks').textContent = currentChunks.length;
@@ -518,8 +559,16 @@
             const progress = ((currentChunkIndex + 1) / currentChunks.length * 100).toFixed(0);
             document.getElementById('sendProgress').style.width = progress + '%';
             document.getElementById('sendProgress').textContent = progress + '%';
-            document.getElementById('sendProgressText').textContent = 
+            document.getElementById('sendProgressText').textContent =
                 `Frame ${currentChunkIndex + 1} / ${currentChunks.length}`;
+
+            // Update fullscreen info if in fullscreen mode
+            if (isFullscreen) {
+                const info = document.getElementById('fullscreenInfo');
+                if (info) {
+                    info.textContent = `Frame ${currentChunkIndex + 1} / ${currentChunks.length}`;
+                }
+            }
 
             // Move to next chunk (loop around)
             currentChunkIndex = (currentChunkIndex + 1) % currentChunks.length;
@@ -531,7 +580,43 @@
                 transmissionInterval = null;
             }
             document.getElementById('stopBtn').disabled = true;
+            document.getElementById('fullscreenBtn').disabled = true;
             currentChunkIndex = 0;
+            if (isFullscreen) {
+                toggleFullscreen();
+            }
+        }
+
+        function toggleFullscreen() {
+            const qrDisplay = document.getElementById('qrDisplay');
+            const fullscreenBtn = document.getElementById('fullscreenBtn');
+
+            if (!isFullscreen) {
+                // Enter fullscreen
+                qrDisplay.classList.add('fullscreen-qr');
+                fullscreenBtn.textContent = '✕ Exit Fullscreen';
+                fullscreenBtn.classList.add('fullscreen-controls');
+
+                // Add info overlay
+                const info = document.createElement('div');
+                info.id = 'fullscreenInfo';
+                info.className = 'fullscreen-info';
+                info.textContent = `Frame ${currentChunkIndex + 1} / ${currentChunks.length > 0 ? currentChunks.length : 1}`;
+                document.body.appendChild(info);
+
+                isFullscreen = true;
+            } else {
+                // Exit fullscreen
+                qrDisplay.classList.remove('fullscreen-qr');
+                fullscreenBtn.textContent = '⛶ Fullscreen';
+                fullscreenBtn.classList.remove('fullscreen-controls');
+
+                // Remove info overlay
+                const info = document.getElementById('fullscreenInfo');
+                if (info) info.remove();
+
+                isFullscreen = false;
+            }
         }
 
         function testQR() {
@@ -549,6 +634,7 @@
             container.innerHTML = '';
 
             document.getElementById('qrDisplay').style.display = 'block';
+            document.getElementById('fullscreenBtn').disabled = false;
             document.getElementById('totalChunks').textContent = '1';
             document.getElementById('dataSize').textContent = '0.01 KB';
             document.getElementById('sendProgress').style.width = '100%';
@@ -618,7 +704,12 @@
                     { facingMode: "environment" },
                     {
                         fps: 5,
-                        qrbox: { width: 300, height: 300 },
+                        qrbox: function(viewfinderWidth, viewfinderHeight) {
+                            // Make the scan box as large as possible (80% of viewport)
+                            const minDimension = Math.min(viewfinderWidth, viewfinderHeight);
+                            const qrboxSize = Math.floor(minDimension * 0.8);
+                            return { width: qrboxSize, height: qrboxSize };
+                        },
                         aspectRatio: 1.0,
                         disableFlip: false
                     },
