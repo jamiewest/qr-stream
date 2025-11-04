@@ -334,7 +334,7 @@
                             <div class="stat-label">Data Size</div>
                         </div>
                         <div class="stat-card">
-                            <div class="stat-value" id="frameRate">3 fps</div>
+                            <div class="stat-value" id="frameRate">2 fps</div>
                             <div class="stat-label">Frame Rate</div>
                         </div>
                     </div>
@@ -443,16 +443,16 @@
         let currentChunks = [];
         let currentChunkIndex = 0;
 
-        function splitDataIntoChunks(data, chunkSize = 1800) {
+        function splitDataIntoChunks(data, chunkSize = 1200) {
             const chunks = [];
             const encoder = new TextEncoder();
             const bytes = encoder.encode(data);
-            
+
             for (let i = 0; i < bytes.length; i += chunkSize) {
                 const chunk = bytes.slice(i, Math.min(i + chunkSize, bytes.length));
                 chunks.push(chunk);
             }
-            
+
             return chunks;
         }
 
@@ -483,7 +483,7 @@
 
             // Start transmission loop
             displayNextQR();
-            transmissionInterval = setInterval(displayNextQR, 333); // ~3 fps
+            transmissionInterval = setInterval(displayNextQR, 500); // ~2 fps (slower for better scanning)
         }
 
         function displayNextQR() {
@@ -506,11 +506,11 @@
             // Generate new QR code
             new QRCode(container, {
                 text: frameJson,
-                width: 350,
-                height: 350,
+                width: 400,
+                height: 400,
                 colorDark: '#000000',
                 colorLight: '#ffffff',
-                correctLevel: QRCode.CorrectLevel.L // Low error correction for more data
+                correctLevel: QRCode.CorrectLevel.M // Medium error correction for better scanning
             });
 
             // Update progress
@@ -585,9 +585,10 @@
                 await html5QrCode.start(
                     { facingMode: "environment" },
                     {
-                        fps: 10,
-                        qrbox: { width: 250, height: 250 },
-                        aspectRatio: 1.0
+                        fps: 5,
+                        qrbox: { width: 300, height: 300 },
+                        aspectRatio: 1.0,
+                        disableFlip: false
                     },
                     onScanSuccess,
                     onScanFailure
