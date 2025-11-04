@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Code Data Transfer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        
+        h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 20px;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+        
+        .tab {
+            flex: 1;
+            padding: 12px 24px;
+            background: #f0f0f0;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        
+        .tab.active {
+            background: #667eea;
+            color: white;
+        }
+        
+        .tab:hover {
+            transform: translateY(-2px);
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        textarea {
+            width: 100%;
+            min-height: 150px;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            resize: vertical;
+            margin-bottom: 15px;
+        }
+        
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .file-input-wrapper {
+            position: relative;
+            margin-bottom: 15px;
+        }
+        
+        input[type="file"] {
+            display: none;
+        }
+        
+        .file-label {
+            display: inline-block;
+            padding: 12px 24px;
+            background: #f0f0f0;
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .file-label:hover {
+            border-color: #667eea;
+            background: #f8f8ff;
+        }
+        
+        .file-name {
+            margin-left: 10px;
+            color: #666;
+            font-size: 14px;
+        }
+        
+        button {
+            padding: 12px 32px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        button:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+        }
+        
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .qr-display {
+            text-align: center;
+            padding: 30px;
+            background: #f9f9f9;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+        
+        #qrCanvas {
+            display: inline-block;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        #qrCanvas img,
+        #qrCanvas canvas {
+            display: block;
+            max-width: 100%;
+            height: auto;
+        }
+        
+        .progress {
+            margin-top: 15px;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 30px;
+            background: #e0e0e0;
+            border-radius: 15px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        .progress-text {
+            color: #666;
+            font-size: 14px;
+            text-align: center;
+        }
+        
+        #reader {
+            width: 100%;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .info-box {
+            background: #f0f7ff;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        
+        .info-box p {
+            color: #555;
+            line-height: 1.6;
+            margin-bottom: 8px;
+        }
+        
+        .info-box p:last-child {
+            margin-bottom: 0;
+        }
+        
+        .success {
+            background: #e8f5e9;
+            border-left-color: #4caf50;
+        }
+        
+        .warning {
+            background: #fff3e0;
+            border-left-color: #ff9800;
+        }
+        
+        .output {
+            margin-top: 20px;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .stat-card {
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <h1>QR Code Data Transfer</h1>
+            <p class="subtitle">Transfer data between devices using animated QR codes</p>
+            
+            <div class="tabs">
+                <button class="tab active" onclick="switchTab('send')">📤 Send</button>
+                <button class="tab" onclick="switchTab('receive')">📥 Receive</button>
+            </div>
+            
+            <!-- SEND TAB -->
+            <div id="sendTab" class="tab-content active">
+                <h2>Send Data</h2>
+                
+                <div class="info-box">
+                    <p><strong>How it works:</strong></p>
+                    <p>1. Enter text or select a file (up to ~5MB recommended)</p>
+                    <p>2. Click "Generate QR Stream"</p>
+                    <p>3. Point the receiving device's camera at the animated QR codes</p>
+                </div>
+                
+                <textarea id="dataInput" placeholder="Enter text data to transfer..."></textarea>
+                
+                <div class="file-input-wrapper">
+                    <label class="file-label" for="fileInput">
+                        📁 Choose File
+                    </label>
+                    <input type="file" id="fileInput" accept="*/*">
+                    <span class="file-name" id="fileName"></span>
+                </div>
+                
+                <div class="controls">
+                    <button onclick="startTransmission()">Generate QR Stream</button>
+                    <button onclick="stopTransmission()" id="stopBtn" disabled>Stop</button>
+                </div>
+                
+                <div id="qrDisplay" class="qr-display" style="display: none;">
+                    <div id="qrCanvas"></div>
+                    <div class="progress">
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="sendProgress">0%</div>
+                        </div>
+                        <div class="progress-text" id="sendProgressText">Frame 0 / 0</div>
+                    </div>
+                    <div class="stats">
+                        <div class="stat-card">
+                            <div class="stat-value" id="totalChunks">0</div>
+                            <div class="stat-label">Total Frames</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="dataSize">0 KB</div>
+                            <div class="stat-label">Data Size</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="frameRate">3 fps</div>
+                            <div class="stat-label">Frame Rate</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- RECEIVE TAB -->
+            <div id="receiveTab" class="tab-content">
+                <h2>Receive Data</h2>
+                
+                <div class="info-box">
+                    <p><strong>How to receive:</strong></p>
+                    <p>1. Click "Start Camera" and allow camera permissions</p>
+                    <p>2. Point your camera at the animated QR codes</p>
+                    <p>3. Wait until all frames are received</p>
+                    <p>4. Download or view the received data</p>
+                </div>
+                
+                <div class="info-box warning">
+                    <p><strong>⚠️ Camera Requirements:</strong></p>
+                    <p>• Must use <strong>HTTPS</strong> on mobile (or localhost for testing)</p>
+                    <p>• Allow camera permissions when prompted</p>
+                    <p>• Works best on Chrome (Android) or Safari (iOS)</p>
+                </div>
+                
+                <div class="controls">
+                    <button onclick="startScanning()">Start Camera</button>
+                    <button onclick="stopScanning()" id="stopScanBtn" disabled>Stop Camera</button>
+                    <button onclick="resetReceiver()">Reset</button>
+                </div>
+                
+                <div id="reader" style="display: none;"></div>
+                
+                <div class="progress" id="receiveProgress" style="display: none;">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="receiveProgressFill">0%</div>
+                    </div>
+                    <div class="progress-text" id="receiveProgressText">Received 0 / 0 frames</div>
+                </div>
+                
+                <div class="stats" id="receiveStats" style="display: none;">
+                    <div class="stat-card">
+                        <div class="stat-value" id="receivedCount">0</div>
+                        <div class="stat-label">Frames Received</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="totalFrames">0</div>
+                        <div class="stat-label">Total Frames</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="receiveDataSize">0 KB</div>
+                        <div class="stat-label">Data Size</div>
+                    </div>
+                </div>
+                
+                <div id="receiveOutput" class="output"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- QR Code Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <!-- HTML5 QR Code Scanner -->
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    
+    <script>
+        // Tab switching
+        function switchTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            
+            if (tab === 'send') {
+                document.querySelector('.tab:nth-child(1)').classList.add('active');
+                document.getElementById('sendTab').classList.add('active');
+                stopScanning();
+            } else {
+                document.querySelector('.tab:nth-child(2)').classList.add('active');
+                document.getElementById('receiveTab').classList.add('active');
+                stopTransmission();
+            }
+        }
+
+        // File input handling
+        document.getElementById('fileInput').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                document.getElementById('fileName').textContent = `${file.name} (${(file.size / 1024).toFixed(2)} KB)`;
+                
+                // Read file as base64
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const base64 = event.target.result.split(',')[1];
+                    document.getElementById('dataInput').value = JSON.stringify({
+                        type: 'file',
+                        name: file.name,
+                        mimeType: file.type,
+                        data: base64
+                    });
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // ============ SENDER LOGIC ============
+        let transmissionInterval = null;
+        let currentChunks = [];
+        let currentChunkIndex = 0;
+
+        function splitDataIntoChunks(data, chunkSize = 1800) {
+            const chunks = [];
+            const encoder = new TextEncoder();
+            const bytes = encoder.encode(data);
+            
+            for (let i = 0; i < bytes.length; i += chunkSize) {
+                const chunk = bytes.slice(i, Math.min(i + chunkSize, bytes.length));
+                chunks.push(chunk);
+            }
+            
+            return chunks;
+        }
+
+        function bytesToBase64(bytes) {
+            let binary = '';
+            bytes.forEach(byte => binary += String.fromCharCode(byte));
+            return btoa(binary);
+        }
+
+        function startTransmission() {
+            const dataInput = document.getElementById('dataInput').value;
+            if (!dataInput) {
+                alert('Please enter some data or select a file');
+                return;
+            }
+
+            // Split data into chunks
+            currentChunks = splitDataIntoChunks(dataInput);
+            currentChunkIndex = 0;
+
+            // Show display
+            document.getElementById('qrDisplay').style.display = 'block';
+            document.getElementById('stopBtn').disabled = false;
+
+            // Update stats
+            document.getElementById('totalChunks').textContent = currentChunks.length;
+            document.getElementById('dataSize').textContent = (dataInput.length / 1024).toFixed(2) + ' KB';
+
+            // Start transmission loop
+            displayNextQR();
+            transmissionInterval = setInterval(displayNextQR, 333); // ~3 fps
+        }
+
+        function displayNextQR() {
+            if (currentChunks.length === 0) return;
+
+            const chunk = currentChunks[currentChunkIndex];
+            const frame = {
+                v: 1, // version
+                i: currentChunkIndex, // index
+                t: currentChunks.length, // total
+                d: bytesToBase64(chunk) // data
+            };
+
+            const frameJson = JSON.stringify(frame);
+            
+            // Clear previous QR code
+            const container = document.getElementById('qrCanvas');
+            container.innerHTML = '';
+            
+            // Generate new QR code
+            new QRCode(container, {
+                text: frameJson,
+                width: 350,
+                height: 350,
+                colorDark: '#000000',
+                colorLight: '#ffffff',
+                correctLevel: QRCode.CorrectLevel.L // Low error correction for more data
+            });
+
+            // Update progress
+            const progress = ((currentChunkIndex + 1) / currentChunks.length * 100).toFixed(0);
+            document.getElementById('sendProgress').style.width = progress + '%';
+            document.getElementById('sendProgress').textContent = progress + '%';
+            document.getElementById('sendProgressText').textContent = 
+                `Frame ${currentChunkIndex + 1} / ${currentChunks.length}`;
+
+            // Move to next chunk (loop around)
+            currentChunkIndex = (currentChunkIndex + 1) % currentChunks.length;
+        }
+
+        function stopTransmission() {
+            if (transmissionInterval) {
+                clearInterval(transmissionInterval);
+                transmissionInterval = null;
+            }
+            document.getElementById('stopBtn').disabled = true;
+            currentChunkIndex = 0;
+        }
+
+        // ============ RECEIVER LOGIC ============
+        let html5QrCode = null;
+        let receivedFrames = new Map();
+        let totalExpectedFrames = 0;
+        let isScanning = false;
+
+        async function startScanning() {
+            if (isScanning) return;
+
+            // Check for HTTPS (required on mobile)
+            if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+                showError('Camera access requires HTTPS on mobile devices. Please access this page via HTTPS or use localhost for testing.');
+                return;
+            }
+
+            const reader = document.getElementById('reader');
+            const output = document.getElementById('receiveOutput');
+            
+            // Show loading message
+            output.innerHTML = `
+                <div class="info-box">
+                    <p>📸 <strong>Requesting camera access...</strong></p>
+                    <p>Please allow camera permissions when prompted.</p>
+                </div>
+            `;
+
+            reader.style.display = 'block';
+            document.getElementById('receiveProgress').style.display = 'block';
+            document.getElementById('receiveStats').style.display = 'grid';
+            document.getElementById('stopScanBtn').disabled = false;
+
+            html5QrCode = new Html5Qrcode("reader");
+            
+            try {
+                // First, check if we can get camera list
+                const devices = await Html5Qrcode.getCameras();
+                if (!devices || devices.length === 0) {
+                    throw new Error('No cameras found on this device');
+                }
+
+                output.innerHTML = `
+                    <div class="info-box">
+                        <p>📷 <strong>Camera starting...</strong></p>
+                        <p>Found ${devices.length} camera(s). Initializing...</p>
+                    </div>
+                `;
+
+                await html5QrCode.start(
+                    { facingMode: "environment" },
+                    {
+                        fps: 10,
+                        qrbox: { width: 250, height: 250 },
+                        aspectRatio: 1.0
+                    },
+                    onScanSuccess,
+                    onScanFailure
+                );
+                
+                isScanning = true;
+                output.innerHTML = `
+                    <div class="info-box success">
+                        <p>✅ <strong>Camera ready!</strong></p>
+                        <p>Point your camera at the QR codes to receive data.</p>
+                    </div>
+                `;
+            } catch (err) {
+                isScanning = false;
+                reader.style.display = 'none';
+                document.getElementById('stopScanBtn').disabled = true;
+                
+                let errorMsg = '';
+                if (err.name === 'NotAllowedError' || err.message.includes('Permission')) {
+                    errorMsg = '❌ <strong>Camera permission denied</strong><br>Please allow camera access in your browser settings and try again.';
+                } else if (err.message.includes('NotFoundError') || err.message.includes('No cameras')) {
+                    errorMsg = '❌ <strong>No camera found</strong><br>Make sure your device has a camera and it\'s not being used by another app.';
+                } else if (err.message.includes('NotReadableError')) {
+                    errorMsg = '❌ <strong>Camera in use</strong><br>Close other apps using the camera and try again.';
+                } else if (err.message.includes('HTTPS')) {
+                    errorMsg = '❌ <strong>HTTPS Required</strong><br>Camera access requires a secure connection on mobile devices.';
+                } else {
+                    errorMsg = `❌ <strong>Camera error</strong><br>${err.message || err}`;
+                }
+                
+                showError(errorMsg);
+                console.error('Camera error:', err);
+            }
+        }
+
+        function showError(message) {
+            const output = document.getElementById('receiveOutput');
+            output.innerHTML = `
+                <div class="info-box warning">
+                    <p>${message}</p>
+                    <p style="margin-top: 10px;"><strong>Troubleshooting:</strong></p>
+                    <p>• Make sure you're using HTTPS (or localhost)</p>
+                    <p>• Check browser camera permissions in settings</p>
+                    <p>• Close other apps using the camera</p>
+                    <p>• Try a different browser (Chrome/Safari work best)</p>
+                    <p>• Ensure the page is not in an iframe</p>
+                </div>
+            `;
+        }
+
+        function onScanSuccess(decodedText, decodedResult) {
+            try {
+                const frame = JSON.parse(decodedText);
+                
+                // Validate frame structure
+                if (!frame.v || frame.i === undefined || !frame.t || !frame.d) {
+                    return; // Not our format
+                }
+
+                // Store frame
+                if (!receivedFrames.has(frame.i)) {
+                    receivedFrames.set(frame.i, frame.d);
+                    totalExpectedFrames = frame.t;
+
+                    // Update UI
+                    updateReceiveProgress();
+
+                    // Check if complete
+                    if (receivedFrames.size === totalExpectedFrames) {
+                        completeReception();
+                    }
+                }
+            } catch (err) {
+                // Not JSON or not our format - ignore
+            }
+        }
+
+        function onScanFailure(error) {
+            // Scanning errors are normal, just ignore
+        }
+
+        function updateReceiveProgress() {
+            const progress = (receivedFrames.size / totalExpectedFrames * 100).toFixed(0);
+            document.getElementById('receiveProgressFill').style.width = progress + '%';
+            document.getElementById('receiveProgressFill').textContent = progress + '%';
+            document.getElementById('receiveProgressText').textContent = 
+                `Received ${receivedFrames.size} / ${totalExpectedFrames} frames`;
+            
+            document.getElementById('receivedCount').textContent = receivedFrames.size;
+            document.getElementById('totalFrames').textContent = totalExpectedFrames;
+        }
+
+        function base64ToBytes(base64) {
+            const binary = atob(base64);
+            const bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) {
+                bytes[i] = binary.charCodeAt(i);
+            }
+            return bytes;
+        }
+
+        function completeReception() {
+            stopScanning();
+
+            // Reconstruct data
+            const sortedFrames = Array.from(receivedFrames.entries())
+                .sort((a, b) => a[0] - b[0])
+                .map(entry => entry[1]);
+
+            // Combine all chunks
+            const allBytes = [];
+            sortedFrames.forEach(base64Chunk => {
+                const bytes = base64ToBytes(base64Chunk);
+                allBytes.push(...bytes);
+            });
+
+            // Decode to string
+            const decoder = new TextDecoder();
+            const reconstructedData = decoder.decode(new Uint8Array(allBytes));
+
+            // Update data size
+            document.getElementById('receiveDataSize').textContent = 
+                (reconstructedData.length / 1024).toFixed(2) + ' KB';
+
+            // Display result
+            displayReceivedData(reconstructedData);
+        }
+
+        function displayReceivedData(data) {
+            const output = document.getElementById('receiveOutput');
+            
+            try {
+                // Try to parse as file
+                const parsed = JSON.parse(data);
+                if (parsed.type === 'file') {
+                    output.innerHTML = `
+                        <div class="info-box success">
+                            <p><strong>✅ File Received!</strong></p>
+                            <p>Filename: ${parsed.name}</p>
+                            <p>Type: ${parsed.mimeType}</p>
+                            <p>Size: ${(atob(parsed.data).length / 1024).toFixed(2)} KB</p>
+                        </div>
+                        <button onclick="downloadReceivedFile('${parsed.name}', '${parsed.mimeType}', '${parsed.data}')">
+                            💾 Download File
+                        </button>
+                    `;
+                } else {
+                    throw new Error('Not a file');
+                }
+            } catch (err) {
+                // Plain text
+                output.innerHTML = `
+                    <div class="info-box success">
+                        <p><strong>✅ Data Received!</strong></p>
+                        <p>Size: ${(data.length / 1024).toFixed(2)} KB</p>
+                    </div>
+                    <textarea readonly style="width: 100%; min-height: 200px;">${data}</textarea>
+                    <button onclick="copyToClipboard(\`${data.replace(/`/g, '\\`')}\`)">
+                        📋 Copy to Clipboard
+                    </button>
+                `;
+            }
+        }
+
+        function downloadReceivedFile(filename, mimeType, base64Data) {
+            const link = document.createElement('a');
+            link.href = `data:${mimeType};base64,${base64Data}`;
+            link.download = filename;
+            link.click();
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                alert('Copied to clipboard!');
+            });
+        }
+
+        async function stopScanning() {
+            if (html5QrCode && isScanning) {
+                try {
+                    await html5QrCode.stop();
+                    document.getElementById('reader').style.display = 'none';
+                    isScanning = false;
+                    document.getElementById('stopScanBtn').disabled = true;
+                } catch (err) {
+                    console.error('Error stopping scanner:', err);
+                }
+            }
+        }
+
+        function resetReceiver() {
+            stopScanning();
+            receivedFrames.clear();
+            totalExpectedFrames = 0;
+            document.getElementById('receiveProgress').style.display = 'none';
+            document.getElementById('receiveStats').style.display = 'none';
+            document.getElementById('receiveOutput').innerHTML = '';
+            document.getElementById('receiveProgressFill').style.width = '0%';
+            document.getElementById('receiveProgressFill').textContent = '0%';
+            document.getElementById('receivedCount').textContent = '0';
+            document.getElementById('totalFrames').textContent = '0';
+            document.getElementById('receiveDataSize').textContent = '0 KB';
+        }
+    </script>
+</body>
+</html>
